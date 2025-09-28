@@ -2,6 +2,9 @@ import datetime, pathlib, time
 
 LOG = pathlib.Path("logs/pipeline.log")
 
+print("Ping ok, show interface ok, show evpn ok (mock)")
+
+
 def log_write(msg):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
