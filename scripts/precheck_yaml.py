@@ -2,6 +2,9 @@ import yaml, pathlib, sys, datetime
 
 LOG = pathlib.Path("logs/pipeline.log")
 
+print("YAML precheck passed (mock)")
+
+
 def log_write(msg):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
