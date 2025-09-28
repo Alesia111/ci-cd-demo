@@ -1,0 +1,13 @@
+name: Simple CI/CD Demo
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run hello
+        run: echo "Pipeline running successfully ✅"
