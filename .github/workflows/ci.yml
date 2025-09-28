@@ -1,76 +1,22 @@
-name: L2EVPN CI/CD Demo
-
-on:
-  push:
-  workflow_dispatch:
-
+name: Simple CI/CD Demo
+on: push
 jobs:
-  precheck:
-    name: 1) Precheck YAML (mock)
+  generate-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Prepare log folder
-        run: mkdir -p logs
-      - name: Syntax check (mock)
-        run: |
-          echo "[$(date -Is)] Precheck OK" | tee -a logs/pipeline.log
+      - run: echo "v0.1.$RANDOM" > version.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: version, path: version.txt }
 
-  build_lab:
-    name: 2) Build Lab (mock)
+  build-and-deploy-service:
     runs-on: ubuntu-latest
-    needs: precheck
+    needs: generate-version
     steps:
-      - uses: actions/checkout@v4
-      - name: Prepare log folder
-        run: mkdir -p logs
-      - name: Deploy with Containerlab (mock)
-        run: |
-          echo "[$(date -Is)] Deploying lab..." | tee -a logs/pipeline.log
-          sleep 2
-          echo "[$(date -Is)] Lab up (mock)" | tee -a logs/pipeline.log
+      - uses: actions/download-artifact@v4
+        with: { name: version }
+      - run: |
+          echo "Using $(cat version.txt)"
+          echo "Build+Deploy OK"
 
-  push_config:
-    name: 3) Push Config (mock)
-    runs-on: ubuntu-latest
-    needs: build_lab
-    steps:
-      - uses: actions/checkout@v4
-      - name: Apply .cli configs (mock)
-        run: |
-          echo "[$(date -Is)] Pushing configs to spine/leaf (mock)" | tee -a logs/pipeline.log
-
-  validation:
-    name: 4) Validation (mock)
-    runs-on: ubuntu-latest
-    needs: push_config
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run tests (mock)
-        run: |
-          echo "[$(date -Is)] ping leaf1 -> ok (mock)" | tee -a logs/pipeline.log
-          echo "[$(date -Is)] show interface -> up (mock)" | tee -a logs/pipeline.log
-          echo "[$(date -Is)] show evpn -> routes learned (mock)" | tee -a logs/pipeline.log
-      - name: Write test summary CSV
-        run: |
-          mkdir -p artifacts
-          echo "Run,Duration(s),Timestamp" > artifacts/test_summary.csv
-          echo "Run 1,15,$(date -Ins)" >> artifacts/test_summary.csv
-
-  archive:
-    name: 5) Archive
-    runs-on: ubuntu-latest
-    needs: validation
-    steps:
-      - uses: actions/checkout@v4
-      - name: Ensure artifacts folder
-        run: mkdir -p artifacts logs
-      - name: Upload logs and CSV
-        uses: actions/upload-artifact@v4
-        with:
-          name: l2evpn-ci-results
-          path: |
-            logs/pipeline.log
-            artifacts/test_summary.csv
 
 
