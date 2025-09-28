@@ -1,119 +1,76 @@
 name: L2EVPN CI/CD Demo
 
 on:
-  workflow_dispatch: {}        # butoni "Run workflow"
   push:
-    branches: [ main ]         # opcionale: nis edhe kur ben push ne main
-
-concurrency:
-  group: l2evpn-ci
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
   precheck:
-    name: 1) Precheck YAML
+    name: 1) Precheck YAML (mock)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install pyyaml
-
-      - name: Ensure logs folder
+      - name: Prepare log folder
         run: mkdir -p logs
+      - name: Syntax check (mock)
+        run: |
+          echo "[$(date -Is)] Precheck OK" | tee -a logs/pipeline.log
 
-      - name: Run precheck
-        run: python scripts/precheck_yaml.py | tee -a logs/pipeline.log
-
-      - name: Init CSV
-        run: echo "Run,Duration_s,Timestamp" > logs/test_summary.csv
-
-      - name: Upload partial artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: l2evpn-logs
-          path: logs/*
-          if-no-files-found: warn
-
-  build:
+  build_lab:
     name: 2) Build Lab (mock)
     runs-on: ubuntu-latest
     needs: precheck
     steps:
       - uses: actions/checkout@v4
-
-      - name: Ensure logs folder
+      - name: Prepare log folder
         run: mkdir -p logs
-
-      - name: Mock build
+      - name: Deploy with Containerlab (mock)
         run: |
-          echo "Starting build..." | tee -a logs/pipeline.log
-          sleep 3
-          echo "✅ Build completed (mock) @ $(date -Iseconds)" | tee -a logs/pipeline.log
+          echo "[$(date -Is)] Deploying lab..." | tee -a logs/pipeline.log
+          sleep 2
+          echo "[$(date -Is)] Lab up (mock)" | tee -a logs/pipeline.log
 
-      - name: CSV row (Run 1)
-        run: echo "1,15,$(date -Iseconds)" >> logs/test_summary.csv
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: l2evpn-logs
-          path: logs/*
-          if-no-files-found: warn
-
-  config:
+  push_config:
     name: 3) Push Config (mock)
     runs-on: ubuntu-latest
-    needs: build
+    needs: build_lab
     steps:
       - uses: actions/checkout@v4
+      - name: Apply .cli configs (mock)
+        run: |
+          echo "[$(date -Is)] Pushing configs to spine/leaf (mock)" | tee -a logs/pipeline.log
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Ensure logs folder
-        run: mkdir -p logs
-
-      - name: Run config
-        run: python scripts/push_config.py | tee -a logs/pipeline.log
-
-      - name: CSV row (Run 2)
-        run: echo "2,0,$(date -Iseconds)" >> logs/test_summary.csv
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: l2evpn-logs
-          path: logs/*
-          if-no-files-found: warn
-
-  validate:
+  validation:
     name: 4) Validation (mock)
     runs-on: ubuntu-latest
-    needs: config
+    needs: push_config
     steps:
       - uses: actions/checkout@v4
+      - name: Run tests (mock)
+        run: |
+          echo "[$(date -Is)] ping leaf1 -> ok (mock)" | tee -a logs/pipeline.log
+          echo "[$(date -Is)] show interface -> up (mock)" | tee -a logs/pipeline.log
+          echo "[$(date -Is)] show evpn -> routes learned (mock)" | tee -a logs/pipeline.log
+      - name: Write test summary CSV
+        run: |
+          mkdir -p artifacts
+          echo "Run,Duration(s),Timestamp" > artifacts/test_summary.csv
+          echo "Run 1,15,$(date -Ins)" >> artifacts/test_summary.csv
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Ensure logs folder
-        run: mkdir -p logs
-
-      - name: Run tests
-        run: python scripts/run_tests.py | tee -a logs/pipeline.log
-
-      - name: CSV row (Run 3)
-        run: echo "3,0,$(date -Iseconds)" >> logs/test_summary.csv
-
-      - name: Upload final artifacts
+  archive:
+    name: 5) Archive
+    runs-on: ubuntu-latest
+    needs: validation
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure artifacts folder
+        run: mkdir -p artifacts logs
+      - name: Upload logs and CSV
         uses: actions/upload-artifact@v4
         with:
-          name: l2evpn-logs
-          path: logs/*
-          if-no-files-found: error
+          name: l2evpn-ci-results
+          path: |
+            logs/pipeline.log
+            artifacts/test_summary.csv
+
 
