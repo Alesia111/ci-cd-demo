@@ -1,9 +1,9 @@
 name: L2EVPN CI/CD Demo
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {}        # butoni "Run workflow"
   push:
-    branches: [ main ]
+    branches: [ main ]         # opcionale: nis edhe kur ben push ne main
 
 concurrency:
   group: l2evpn-ci
@@ -15,14 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: pip install pyyaml
-      - run: mkdir -p logs
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Ensure logs folder
+        run: mkdir -p logs
+
       - name: Run precheck
         run: python scripts/precheck_yaml.py | tee -a logs/pipeline.log
-      - name: Write CSV header
+
+      - name: Init CSV
         run: echo "Run,Duration_s,Timestamp" > logs/test_summary.csv
+
+      - name: Upload partial artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: l2evpn-logs
+          path: logs/*
+          if-no-files-found: warn
 
   build:
     name: 2) Build Lab (mock)
@@ -30,15 +45,24 @@ jobs:
     needs: precheck
     steps:
       - uses: actions/checkout@v4
+
+      - name: Ensure logs folder
+        run: mkdir -p logs
+
       - name: Mock build
         run: |
           echo "Starting build..." | tee -a logs/pipeline.log
           sleep 3
           echo "✅ Build completed (mock) @ $(date -Iseconds)" | tee -a logs/pipeline.log
-      - name: CSV row run 1
+
+      - name: CSV row (Run 1)
         run: echo "1,15,$(date -Iseconds)" >> logs/test_summary.csv
+
       - uses: actions/upload-artifact@v4
-        with: { name: l2evpn-logs, path: logs/*, if-no-files-found: warn }
+        with:
+          name: l2evpn-logs
+          path: logs/*
+          if-no-files-found: warn
 
   config:
     name: 3) Push Config (mock)
@@ -46,12 +70,25 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ensure logs folder
+        run: mkdir -p logs
+
       - name: Run config
         run: python scripts/push_config.py | tee -a logs/pipeline.log
-      - name: CSV row run 2
+
+      - name: CSV row (Run 2)
         run: echo "2,0,$(date -Iseconds)" >> logs/test_summary.csv
+
       - uses: actions/upload-artifact@v4
-        with: { name: l2evpn-logs, path: logs/*, if-no-files-found: warn }
+        with:
+          name: l2evpn-logs
+          path: logs/*
+          if-no-files-found: warn
 
   validate:
     name: 4) Validation (mock)
@@ -59,13 +96,24 @@ jobs:
     needs: config
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ensure logs folder
+        run: mkdir -p logs
+
       - name: Run tests
         run: python scripts/run_tests.py | tee -a logs/pipeline.log
-      - name: CSV row run 3
+
+      - name: CSV row (Run 3)
         run: echo "3,0,$(date -Iseconds)" >> logs/test_summary.csv
+
       - name: Upload final artifacts
         uses: actions/upload-artifact@v4
         with:
           name: l2evpn-logs
           path: logs/*
           if-no-files-found: error
+
