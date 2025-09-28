@@ -1,22 +1,69 @@
-name: Simple CI/CD Demo
-on: push
-jobs:
-  generate-version:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "v0.1.$RANDOM" > version.txt
-      - uses: actions/upload-artifact@v4
-        with: { name: version, path: version.txt }
+name: L2EVPN CI/CD Demo
 
-  build-and-deploy-service:
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  precheck:
+    name: 1) Precheck
     runs-on: ubuntu-latest
-    needs: generate-version
     steps:
-      - uses: actions/download-artifact@v4
-        with: { name: version }
-      - run: |
-          echo "Using $(cat version.txt)"
-          echo "Build+Deploy OK"
+      - uses: actions/checkout@v4
+      - name: Run Precheck
+        run: |
+          echo "[$(date -Is)] Precheck OK"
+
+  build_lab:
+    name: 2) Build Lab
+    runs-on: ubuntu-latest
+    needs: precheck
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Lab (mock)
+        run: |
+          echo "[$(date -Is)] Building lab..."
+          sleep 2
+          echo "[$(date -Is)] Lab up"
+
+  push_config:
+    name: 3) Push Config
+    runs-on: ubuntu-latest
+    needs: build_lab
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push config (mock)
+        run: |
+          echo "[$(date -Is)] Pushing configs..."
+          sleep 1
+          echo "[$(date -Is)] Config applied"
+
+  validation:
+    name: 4) Validation
+    runs-on: ubuntu-latest
+    needs: push_config
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validation tests (mock)
+        run: |
+          echo "[$(date -Is)] Ping OK"
+          echo "[$(date -Is)] show interface OK"
+          echo "[$(date -Is)] show evpn OK"
+
+  archive:
+    name: 5) Archive
+    runs-on: ubuntu-latest
+    needs: validation
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive results
+        run: |
+          mkdir -p artifacts
+          echo "Run 1,15,$(date -Ins)" > artifacts/test_summary.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test_results
+          path: artifacts/test_summary.csv
 
 
 
