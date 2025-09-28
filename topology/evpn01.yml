@@ -1,0 +1,9 @@
+lab:
+  name: evpn01
+nodes:
+  - name: spine1
+    kind: srl
+  - name: leaf1
+    kind: srl
+  - name: leaf2
+    kind: srl
